@@ -4,8 +4,8 @@ const User = require("../schemas/user");
 const {
   check_authentication,
   check_authorization,
-} = require("../middleware/check_auth");
-const constants = require("../middleware/constants");
+} = require("../utils/check_auth");
+const constants = require("../utils/constants");
 
 // Get all users with filters (Only MODs and above)
 router.get(
@@ -39,12 +39,10 @@ router.get(
   async (req, res) => {
     try {
       if (req.user.id === req.params.id) {
-        return res
-          .status(403)
-          .json({
-            success: false,
-            message: "You cannot view your own account.",
-          });
+        return res.status(403).json({
+          success: false,
+          message: "You cannot view your own account.",
+        });
       }
       const user = await User.findById(req.params.id).populate("role");
       if (!user || !user.status) {

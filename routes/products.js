@@ -5,8 +5,8 @@ let categorySchema = require("../schemas/category");
 const {
   check_authentication,
   check_authorization,
-} = require("../middleware/check_auth");
-const constants = require("../middleware/constants");
+} = require("../utils/check_auth");
+const constants = require("../utils/constants");
 
 function BuildQuery(query) {
   let result = {};

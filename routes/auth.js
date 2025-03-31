@@ -1,105 +1,76 @@
-const express = require("express");
-const router = express.Router();
-const Role = require("../schemas/role");
-const {
-  check_authentication,
-  check_authorization,
-} = require("../middleware/check_auth");
-const constants = require("../middleware/constants");
+var express = require("express");
+var router = express.Router();
+let userControllers = require("../controllers/users");
+let { check_authentication } = require("../utils/check_auth");
+let jwt = require("jsonwebtoken");
+let constants = require("../utils/constants");
 
-// Get all roles
-router.get("/", async (req, res) => {
+router.post("/login", async function (req, res, next) {
   try {
-    const roles = await Role.find();
-    res.status(200).json({ success: true, data: roles });
+    let username = req.body.username;
+    let password = req.body.password;
+    let result = await userControllers.checkLogin(username, password);
+    res.status(200).send({
+      success: true,
+      data: jwt.sign(
+        {
+          id: result,
+          expireIn: new Date(Date.now() + 3600 * 1000).getTime(),
+        },
+        constants.SECRET_KEY
+      ),
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
-
-// Get role by ID
-router.get("/:id", async (req, res) => {
+router.post("/signup", async function (req, res, next) {
   try {
-    const role = await Role.findById(req.params.id);
-    if (!role)
-      return res
-        .status(404)
-        .json({ success: false, message: "Role not found" });
-
-    res.status(200).json({ success: true, data: role });
+    let username = req.body.username;
+    let password = req.body.password;
+    let email = req.body.email;
+    let result = await userControllers.createAnUser(
+      username,
+      password,
+      email,
+      "user"
+    );
+    res.status(200).send({
+      success: true,
+      data: result,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
-
-// Create a new role
+router.get("/me", check_authentication, async function (req, res, next) {
+  try {
+    res.send({
+      success: true,
+      data: req.user,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 router.post(
-  "/",
+  "/changepassword",
   check_authentication,
-  check_authorization(constants.ADMIN_PERMISSION),
-  async (req, res) => {
+  async function (req, res, next) {
     try {
-      const { name, description } = req.body;
-
-      const existingRole = await Role.findOne({ name });
-      if (existingRole)
-        return res
-          .status(400)
-          .json({ success: false, message: "Role already exists" });
-
-      const newRole = new Role({ name, description });
-      await newRole.save();
-
-      res.status(201).json({ success: true, data: newRole });
+      let oldpassword = req.body.oldpassword;
+      let newpassword = req.body.newpassword;
+      let user = userControllers.changePassword(
+        req.user,
+        oldpassword,
+        newpassword
+      );
+      res.send({
+        success: true,
+        data: user,
+      });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-);
-
-// Update role
-router.put(
-  "/:id",
-  check_authentication,
-  check_authorization(constants.ADMIN_PERMISSION),
-  async (req, res) => {
-    try {
-      const { name, description } = req.body;
-      const role = await Role.findById(req.params.id);
-
-      if (!role)
-        return res
-          .status(404)
-          .json({ success: false, message: "Role not found" });
-
-      if (name) role.name = name;
-      if (description) role.description = description;
-
-      await role.save();
-      res.status(200).json({ success: true, data: role });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-);
-
-// Delete role
-router.delete(
-  "/:id",
-  check_authentication,
-  check_authorization(constants.ADMIN_PERMISSION),
-  async (req, res) => {
-    try {
-      const role = await Role.findById(req.params.id);
-      if (!role)
-        return res
-          .status(404)
-          .json({ success: false, message: "Role not found" });
-
-      await role.deleteOne();
-      res.status(200).json({ success: true, message: "Role deleted" });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      next(error);
     }
   }
 );

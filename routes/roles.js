@@ -4,8 +4,8 @@ const Role = require("../schemas/role");
 const {
   check_authentication,
   check_authorization,
-} = require("../middleware/check_auth");
-const constants = require("../middleware/constants");
+} = require("../utils/check_auth");
+const constants = require("../utils/constants");
 
 // Get all roles
 router.get("/", async (req, res) => {
